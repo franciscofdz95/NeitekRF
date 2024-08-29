@@ -1,0 +1,6 @@
+@NeitekRF.API_HostAddress = http://localhost:5116
+
+GET {{NeitekRF.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

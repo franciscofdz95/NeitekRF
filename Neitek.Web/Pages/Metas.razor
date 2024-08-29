@@ -1,0 +1,86 @@
+﻿@code {
+    [Parameter] public List<MetaDto> MetaCollection { get; set; }
+    [Parameter] public EventCallback<int> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback<MetaDto> OnSelectMeta { get; set; }
+    private bool _isActionButtonClicked;
+
+    public enum EstadoTarea
+    {
+        Abierta = 0,
+        Completada = 1
+    }
+
+    public class MetaDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public List<TareaDto> Tareas { get; set; }
+        public bool IsActive { get; set; }
+        public int TotalTareas { get; set; }
+        public int TareasCompletadas { get; set; }
+        public int PorcientoCumplimiento { get; set; }
+    }
+
+    public class TareaDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public DateTime FechaCreada { get; set; }
+        public EstadoTarea Estado { get; set; }
+        public int MetaId { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsSelected { get; set; }
+    }
+
+    private async Task OnMetaSelected(MetaDto meta)
+    {
+        if (!_isActionButtonClicked)
+        {
+            await OnSelectMeta.InvokeAsync(meta);
+        }
+        _isActionButtonClicked = false;
+    }
+
+    private async Task OnEditClicked(MouseEventArgs e, int metaId)
+    {
+        _isActionButtonClicked = true;
+        await OnEdit.InvokeAsync(metaId);
+    }
+
+    private async Task OnDeleteClicked(MouseEventArgs e, int metaId)
+    {
+        _isActionButtonClicked = true;
+        await OnDelete.InvokeAsync(metaId);
+    }
+}
+
+<ul style="list-style-type: none; padding: 0; margin-top: 5px;">
+    @foreach (var meta in MetaCollection)
+    {
+        <li @onclick="() => OnMetaSelected(meta)" style="margin-bottom: 15px; padding: 10px; background-color: #fff; border: 1px solid #dee2e6; border-radius: 5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 14px; font-weight: bold;">@meta.Nombre</span>
+                <div style="display: flex; gap: 5px;">
+                    <button @onclick="(e) => OnEditClicked(e, meta.Id)" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <button @onclick="(e) => OnDeleteClicked(e, meta.Id)" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <p style="font-size: 12px;">Fecha Creada: @meta.FechaCreacion.ToShortDateString()</p>
+            <p style="font-size: 12px;">Tareas completadas: @meta.TareasCompletadas / @meta.TotalTareas</p>
+            <div style="display: flex; align-items: center; font-size: 12px;">
+                <div style="width: 80%; margin-right: 10px;">
+                    <div style="background-color: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden;">
+                        <div style="background-color: #007bff; width: @meta.PorcientoCumplimiento%; height: 10px;"></div>
+                    </div>
+                </div>
+                <span>@meta.PorcientoCumplimiento%</span>
+            </div>
+        </li>
+    }
+</ul>

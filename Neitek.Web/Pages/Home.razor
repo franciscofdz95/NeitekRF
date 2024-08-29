@@ -1,0 +1,362 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+@inject HttpClient Http
+<div style="display: flex; height: 7vh; background-color: #f8f9fa; padding: 10px; border: 1px solid #dee2e6">
+    <h4>Control de Metas</h4>
+</div>
+<div style="display: flex; height: 93vh; margin-top: 10px;">
+    <!-- Sidebar: Metas -->
+    <div style="width: 40%; background-color: #f8f9fa; padding: 10px; border-right: 1px solid #dee2e6;">
+        <button class="btn btn-sm btn-success" @onclick="OpenNewMetaModal">
+            <i class="fas fa-plus"></i>
+            Nueva Meta
+        </button>
+        @if (metas == null)
+        {
+            <p>Cargando metas...</p>
+        }
+        else if (metas.Count == 0)
+        {
+            <p>No hay metas disponibles.</p>
+        }
+        else
+        {
+            <Metas MetaCollection="metas" OnSelectMeta="SelectMeta" OnEdit="EditMeta" OnDelete="DeleteMeta" />
+        }
+    </div>
+
+    <!-- Main Content: Tareas -->
+    <div style="width: 60%; background-color: #f8f9fa; padding: 20px; border-right: 1px solid #dee2e6;">
+    @if (selectedMeta != null)
+    {
+            
+        <button class="btn btn-sm btn-success" @onclick="OpenNewTareaModal">
+            <i class="fas fa-plus"></i>
+            Nueva Tarea
+        </button>
+        <Tareas TareasCollection="@selectedMeta.Tareas" />
+    }
+    </div>
+
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display:@(isNewMetaModalVisible ? "block" : "none"); background-color:rgba(0, 0, 0, 0.5);" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Meta</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseNewMetaModal">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="metaName">Nombre de Meta</label>
+                        <input type="text" class="form-control" id="metaName" @bind="newMeta.Nombre" />
+                        @if (!string.IsNullOrEmpty(validationMessage))
+                        {
+                            <div class="text-danger">@validationMessage</div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="CloseNewMetaModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveMetaAsync">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display:@(isDeleteConfirmationVisible ? "block" : "none"); background-color:rgba(0, 0, 0, 0.5);" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseDeleteConfirmationModal">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar la meta <strong>@metaToDelete?.Nombre</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteMetaAsync">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display:@(isEditMetaModalVisible ? "block" : "none"); background-color:rgba(0, 0, 0, 0.5);" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Meta</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseEditMetaModal">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="metaName">Nombre de Meta</label>
+                        <input type="text" class="form-control" id="metaName" @bind="metaToEdit.Nombre" />
+                        @if (!string.IsNullOrEmpty(editValidationMessage))
+                        {
+                            <div class="text-danger">@editValidationMessage</div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="CloseEditMetaModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="UpdateMetaAsync">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display:@(isNewTareaModalVisible ? "block" : "none"); background-color:rgba(0, 0, 0, 0.5);" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Tarea</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseNewTareaModal">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="tareaName">Nombre de Tarea</label>
+                        <input type="text" class="form-control" id="tareaName" @bind="newTarea.Name" />
+                        @if (!string.IsNullOrEmpty(validationMessage))
+                        {
+                            <div class="text-danger">@validationTareaMessage</div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="CloseNewTareaModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveTareaAsync">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Metas.MetaDto> metas;
+    private Metas.MetaDto selectedMeta;
+    private bool isNewMetaModalVisible, isNewTareaModalVisible = false;
+    private Metas.MetaDto newMeta = new Metas.MetaDto { FechaCreacion = DateTime.Now, Tareas = new List<Metas.TareaDto>(), IsActive = true };
+    private string validationMessage, validationTareaMessage = string.Empty;
+    private Metas.MetaDto metaToDelete;
+    private bool isDeleteConfirmationVisible = false;
+    private bool isEditMetaModalVisible = false;
+    private Metas.MetaDto metaToEdit = new Metas.MetaDto();
+    private string editValidationMessage = string.Empty;
+    private Metas.TareaDto newTarea = new Metas.TareaDto { 
+        FechaCreada = DateTime.Now, 
+        Estado = Metas.EstadoTarea.Abierta,
+        IsSelected = false,
+        IsActive = true,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        metas = await Http.GetFromJsonAsync<List<Metas.MetaDto>>("https://localhost:7035/api/Metas");
+    }
+
+    private void OpenNewMetaModal()
+    {
+        isNewMetaModalVisible = true;
+        validationMessage = string.Empty;
+    }
+
+    private void CloseNewMetaModal()
+    {
+        isNewMetaModalVisible = false;
+        newMeta = new Metas.MetaDto { FechaCreacion = DateTime.Now, Tareas = new List<Metas.TareaDto>(), IsActive = true };
+        validationMessage = string.Empty;
+    }
+
+    private async Task SaveMetaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newMeta.Nombre))
+        {
+            validationMessage = "El nombre de la meta es requerido.";
+            return;
+        }
+
+        if (metas.Any(m => m.Nombre.Equals(newMeta.Nombre, StringComparison.OrdinalIgnoreCase)))
+        {
+            validationMessage = "El nombre de la meta ya existe.";
+            return;
+        }
+
+        newMeta.Id = 0; // Se generará en el servidor
+        newMeta.IsActive = true;
+        newMeta.FechaCreacion = DateTime.Now;
+
+        var response = await Http.PostAsJsonAsync("https://localhost:7035/api/Metas", newMeta);
+
+        if (response.IsSuccessStatusCode)
+        {
+            metas = await Http.GetFromJsonAsync<List<Metas.MetaDto>>("https://localhost:7035/api/Metas");
+            CloseNewMetaModal();
+        }
+        else
+        {
+            validationMessage = "Hubo un problema al guardar la meta.";
+        }
+    }
+
+    private void SelectMeta(Metas.MetaDto meta)
+    {
+        selectedMeta = meta;
+    }
+
+    private void OpenDeleteConfirmationModal(Metas.MetaDto meta)
+    {
+        metaToDelete = meta;
+        isDeleteConfirmationVisible = true;
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+        isDeleteConfirmationVisible = false;
+        metaToDelete = null;
+    }
+
+    private void OpenEditMetaModal(Metas.MetaDto meta)
+    {
+        metaToEdit = new Metas.MetaDto
+            {
+                Id = meta.Id,
+                Nombre = meta.Nombre,
+                FechaCreacion = meta.FechaCreacion,
+                Tareas = meta.Tareas,
+                IsActive = meta.IsActive,
+                TotalTareas = meta.TotalTareas,
+                TareasCompletadas = meta.TareasCompletadas,
+                PorcientoCumplimiento = meta.PorcientoCumplimiento
+            };
+        isEditMetaModalVisible = true;
+        editValidationMessage = string.Empty;
+    }
+
+    private void CloseEditMetaModal()
+    {
+        isEditMetaModalVisible = false;
+        metaToEdit = new Metas.MetaDto();
+        editValidationMessage = string.Empty;
+    }
+
+    private async Task EditMeta(int id)
+    {
+        var meta = metas.FirstOrDefault(m => m.Id == id);
+        if (meta != null)
+        {
+            OpenEditMetaModal(meta);
+        }
+    }
+
+    private async Task DeleteMeta(int id)
+    {
+        var meta = metas.FirstOrDefault(m => m.Id == id);
+        if (meta != null)
+        {
+            OpenDeleteConfirmationModal(meta);
+        }
+    }
+
+    private async Task ConfirmDeleteMetaAsync()
+    {
+        if (metaToDelete != null)
+        {
+            var result = await Http.DeleteAsync($"https://localhost:7035/api/Metas/{metaToDelete.Id}");
+            if (result.IsSuccessStatusCode)
+            {
+                metas = metas.Where(m => m.Id != metaToDelete.Id).ToList();
+                CloseDeleteConfirmationModal();
+            }
+        }
+    }
+
+    private async Task UpdateMetaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(metaToEdit.Nombre))
+        {
+            editValidationMessage = "El nombre de la meta es requerido.";
+            return;
+        }
+
+        if (metas.Any(m => m.Nombre.Equals(metaToEdit.Nombre, StringComparison.OrdinalIgnoreCase) && m.Id != metaToEdit.Id))
+        {
+            editValidationMessage = "El nombre de la meta ya existe.";
+            return;
+        }
+
+        var response = await Http.PutAsJsonAsync($"https://localhost:7035/api/Metas/{metaToEdit.Id}", metaToEdit);
+
+        if (response.IsSuccessStatusCode)
+        {
+            metas = await Http.GetFromJsonAsync<List<Metas.MetaDto>>("https://localhost:7035/api/Metas");
+            CloseEditMetaModal();
+        }
+        else
+        {
+            editValidationMessage = "Hubo un problema al actualizar la meta.";
+        }
+    }
+
+    private void OpenNewTareaModal()
+    {
+        isNewTareaModalVisible = true;
+        validationTareaMessage = string.Empty;
+    }
+
+    private void CloseNewTareaModal()
+    {
+        isNewTareaModalVisible = false;
+        newTarea = new Metas.TareaDto
+            {
+                FechaCreada = DateTime.Now,
+                Estado = Metas.EstadoTarea.Abierta,
+                IsSelected = false,
+                IsActive = true,
+            };
+        validationTareaMessage = string.Empty;
+    }
+
+    private async Task SaveTareaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newTarea.Name))
+        {
+            validationTareaMessage = "El nombre de la tarea es requerido.";
+            return;
+        }
+
+        if (selectedMeta.Tareas.Any(t => t.Name.Equals(newTarea.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            validationTareaMessage = "La tarea ya existe en esta meta.";
+            return;
+        }
+
+        newTarea.MetaId = selectedMeta.Id;
+        newTarea.Id = 0;
+        newTarea.FechaCreada = DateTime.Now;
+
+        var response = await Http.PostAsJsonAsync("https://localhost:7035/api/Tareas", newTarea);
+
+        if (response.IsSuccessStatusCode)
+        {
+            metas = await Http.GetFromJsonAsync<List<Metas.MetaDto>>("https://localhost:7035/api/Metas");
+            selectedMeta = metas.FirstOrDefault(m => m.Id == selectedMeta.Id);
+            CloseNewTareaModal();
+        }
+        else
+        {
+            validationTareaMessage = "Hubo un problema al guardar la tarea.";
+        }
+    }
+
+}

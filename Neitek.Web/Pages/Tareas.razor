@@ -1,0 +1,46 @@
+﻿@if (TareasCollection == null || TareasCollection.Count == 0)
+{
+    <p>No hay tareas disponibles.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th><input type="checkbox" @bind="selectAll" /></th>
+                <th></th>
+                <th>Tarea</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tarea in TareasCollection)
+            {
+                <tr>
+                    <td><input type="checkbox" @bind="@tarea.IsSelected" /></td>
+                    <td style="display:none;">@tarea.MetaId</td>
+                    <td><i class="fa fa-star" style="color: gray;"></i></td>
+                    <td>@tarea.Name</td>
+                    <td>@tarea.FechaCreada.ToString("yyyy-MM-dd")</td>
+                    <td>@tarea.Estado.ToString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter] public List<Metas.TareaDto> TareasCollection { get; set; }
+
+    private bool selectAll = false;
+
+    private void OnSelectAllChanged(ChangeEventArgs e)
+    {
+        selectAll = (bool)e.Value;
+        foreach (var tarea in TareasCollection)
+        {
+            tarea.IsSelected = selectAll;
+        }
+    }
+}
